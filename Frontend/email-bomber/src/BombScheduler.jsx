@@ -16,7 +16,9 @@ export default function BombScheduler() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = { email, time, bombs };
+    console.log(import.meta.env.VITE_API_URL)
     await axios.post(import.meta.env.VITE_API_URL, data);
+    console.log("hi bro")
   };
 
   return (
