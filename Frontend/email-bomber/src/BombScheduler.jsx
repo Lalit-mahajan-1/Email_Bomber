@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import "./BombScheduler.css";
 import axios from "axios";
-import { ToastContainer, toast,Bounce } from "react-toastify";
+import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function BombScheduler() {
@@ -11,31 +10,59 @@ export default function BombScheduler() {
   const [bombs, setBombs] = useState(5);
   const [timeOpen, setTimeOpen] = useState(false);
   const [bombsOpen, setBombsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const timeOptions = Array.from({ length: (600 - 5) / 5 + 1 }, (_, i) => 5 + i * 5);
   const bombOptions = Array.from({ length: 26 }, (_, i) => 5 + i);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    
     const data = { email, time, bombs };
-    try{
-      await axios.post(import.meta.env.VITE_API_URL, data);
-      toast.success("Email Bombing Started 🚀",{
+    
+    try {
+      console.log("Sending request to:", import.meta.env.VITE_API_URL);
+      console.log("Data:", data);
+      
+      const response = await axios.post(import.meta.env.VITE_API_URL, data, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10 second timeout
+      });
+      
+      console.log("Response:", response.data);
+      
+      toast.success("Email Bombing Started 🚀", {
         position: "top-center",
         autoClose: 3000,
         theme: "dark",
         transition: Bounce,
-      })
-    }
-    catch (err) {
-        toast.error("Something Went Wrong !", {
-          position: "top-center",
-          autoClose: 3000,
-          theme: "dark",
-        });
+      });
+      
+    } catch (err) {
+      console.error("Error details:", err);
+      console.error("Error response:", err.response?.data);
+      console.error("Error status:", err.response?.status);
+      
+      let errorMessage = "Something Went Wrong!";
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
       }
-
-    
+      
+      toast.error(errorMessage, {
+        position: "top-center",
+        autoClose: 3000,
+        theme: "dark",
+        transition: Bounce,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -49,16 +76,17 @@ export default function BombScheduler() {
           onChange={(e) => setEmail(e.target.value)}
           required
           placeholder="Enter email"
+          disabled={isLoading}
         />
         <label>Time Interval (seconds)</label>
         <div className="dropdown">
           <div
             className="dropdown-selected"
-            onClick={() => setTimeOpen(!timeOpen)}
+            onClick={() => !isLoading && setTimeOpen(!timeOpen)}
           >
             {time} sec
           </div>
-          {timeOpen && (
+          {timeOpen && !isLoading && (
             <div className="dropdown-options">
               {timeOptions.map((sec) => (
                 <div
@@ -80,11 +108,11 @@ export default function BombScheduler() {
         <div className="dropdown">
           <div
             className="dropdown-selected"
-            onClick={() => setBombsOpen(!bombsOpen)}
+            onClick={() => !isLoading && setBombsOpen(!bombsOpen)}
           >
             {bombs}
           </div>
-          {bombsOpen && (
+          {bombsOpen && !isLoading && (
             <div className="dropdown-options">
               {bombOptions.map((count) => (
                 <div
@@ -102,9 +130,11 @@ export default function BombScheduler() {
           )}
         </div>
 
-        <button type="submit">Bomb Emails</button>
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? "Launching..." : "Bomb Emails"}
+        </button>
       </form>
-      <ToastContainer/>
+      <ToastContainer />
     </div>
   );
 }

@@ -7,9 +7,24 @@ const dotenv = require("dotenv")
 const app = express();
 
 dotenv.config({quiet:true});
+
+// Enhanced CORS configuration
+app.use(cors({
+    origin: ['http://localhost:3000', 'http://localhost:5173', 'https://your-frontend-domain.com'], // Add your frontend URLs
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(cors());
+
+// Add logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    console.log('Request body:', req.body);
+    next();
+});
 
 const PORT = process.env.PORT || 6000;
 const senderEmail = process.env.Email;
@@ -160,16 +175,60 @@ function createEmailTemplate(category, quote, subject) {
 </html>`;
 }
 
-app.post('/bomb', (req, res) => {
+// Add a test route
+app.get('/', (req, res) => {
+    res.json({ message: "Email Bomber API is running!" });
+});
+
+// Add validation middleware
+const validateBombRequest = (req, res, next) => {
+    const { email, time, bombs } = req.body;
+    
+    if (!email || !email.includes('@')) {
+        return res.status(400).json({
+            success: false,
+            message: "Valid email is required"
+        });
+    }
+    
+    if (!time || time < 5 || time > 600) {
+        return res.status(400).json({
+            success: false,
+            message: "Time interval must be between 5 and 600 seconds"
+        });
+    }
+    
+    if (!bombs || bombs < 1 || bombs > 30) {
+        return res.status(400).json({
+            success: false,
+            message: "Number of bombs must be between 1 and 30"
+        });
+    }
+    
+    next();
+};
+
+app.post('/bomb', validateBombRequest, (req, res) => {
     const { time, bombs, email } = req.body;
     const categories = ["attitude", "coding", "nature", "success", "friendship", "inspirational", "funny", "technology", "motivational"];
 
+    console.log(`Starting email campaign: ${bombs} emails to ${email} every ${time} seconds`);
+
     try {
-        const transporter = nodemailer.createTransport({
+        const transporter = nodemailer.createTransporter({
             service: 'gmail',
             auth: {
                 user: senderEmail,
                 pass: Password
+            }
+        });
+
+        // Verify transporter configuration
+        transporter.verify((error, success) => {
+            if (error) {
+                console.error('Transporter verification failed:', error);
+            } else {
+                console.log('Server is ready to take our messages');
             }
         });
 
@@ -183,7 +242,7 @@ app.post('/bomb', (req, res) => {
             const mailOptions = {
                 from: {
                     name: '✨ Inspiration Hub',
-                    address: 'xyzclg28@gmail.com'
+                    address: senderEmail
                 },
                 to: email,
                 subject: subject,
@@ -206,6 +265,7 @@ app.post('/bomb', (req, res) => {
 
         const totalDuration = Math.round((bombs * time) / 60 * 100) / 100;
         
+        // Send immediate response
         res.status(200).json({
             success: true,
             message: "🚀 Email campaign launched successfully!",
@@ -227,12 +287,28 @@ app.post('/bomb', (req, res) => {
     }
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    res.status(500).json({
+        success: false,
+        message: "Internal server error"
+    });
+});
 
+// Handle 404
+app.use('*', (req, res) => {
+    res.status(404).json({
+        success: false,
+        message: "Route not found"
+    });
+});
 
 app.listen(PORT, () => {
     console.log(`🚀 Email Bomber Server running on http://localhost:${PORT}`);
     console.log(`📧 Ready to send beautiful HTML emails!`);
     console.log(`💡 Use POST /bomb to start campaigns`);
+    console.log(`📧 Sender email: ${senderEmail}`);
 });
 
 module.exports = app;
