@@ -2,6 +2,7 @@
 import { useState } from "react";
 import "./BombScheduler.css";
 import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
 
 export default function BombScheduler() {
   const [email, setEmail] = useState("");
@@ -16,9 +17,24 @@ export default function BombScheduler() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = { email, time, bombs };
-    console.log(import.meta.env.VITE_API_URL)
-    await axios.post(import.meta.env.VITE_API_URL, data);
-    console.log("hi bro")
+    try{
+      await axios.post(import.meta.env.VITE_API_URL, data);
+      toast.success("Email Bombing Started 🚀",{
+        position: "top-center",
+        autoClose: 3000,
+        theme: "dark",
+        transition: Bounce,
+      })
+    }
+    catch (err) {
+        toast.error("Something Went Wrong !", {
+          position: "top-center",
+          autoClose: 3000,
+          theme: "dark",
+        });
+      }
+
+    
   };
 
   return (
@@ -87,6 +103,7 @@ export default function BombScheduler() {
 
         <button type="submit">Bomb Emails</button>
       </form>
+      <ToastContainer/>
     </div>
   );
 }
