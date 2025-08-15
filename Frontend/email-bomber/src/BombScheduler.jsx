@@ -2,7 +2,8 @@
 import { useState } from "react";
 import "./BombScheduler.css";
 import axios from "axios";
-import { ToastContainer, toast } from "react-toastify";
+import { ToastContainer, toast,Bounce } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function BombScheduler() {
   const [email, setEmail] = useState("");
